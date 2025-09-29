@@ -74,13 +74,22 @@ public class Main : MonoBehaviour
         float.TryParse(timeScaleField.text, out float timeScale);
         timeScale = Mathf.Clamp(timeScale, 0.01f, 1000f);
 
-        _elapsedInterval += Time.deltaTime;
+        _elapsedInterval += timeScale * Time.deltaTime;
         if(_elapsedInterval >= _currentInterval)
         {
             float delta = _elapsedInterval - _currentInterval;
-            _elapsedInterval = delta;
-
+            
             _pathIndex = (_pathIndex+1)%_displayData.Length;
+            float nextInterval = _displayData[_pathIndex].nextDataInterval;
+
+            while(delta > nextInterval)
+            {
+                delta -= nextInterval;
+                _pathIndex = (_pathIndex + 1) % _displayData.Length;
+                nextInterval = _displayData[_pathIndex].nextDataInterval;
+            }
+
+            _elapsedInterval = delta;
 
             DisplayData currentData = _displayData[_pathIndex];
 
@@ -100,8 +109,8 @@ public class Main : MonoBehaviour
         float lerpValue = _elapsedInterval/_currentInterval;
         Vector3 vel = Vector3.Lerp(_currentVel, _nextVel, lerpValue);
 
-        satellite.position += vel*Time.deltaTime;
-        satellite.rotation = Quaternion.LookRotation(vel);
+        satellite.position += vel*timeScale*Time.deltaTime;
+        satellite.rotation = Quaternion.LookRotation(vel.normalized);
 
         earthTransform.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
     }
