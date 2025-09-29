@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Main : MonoBehaviour
 {
@@ -35,6 +37,8 @@ public class Main : MonoBehaviour
     public LineRenderer equatorLine;
     public LineRenderer primeMeridianLine;
     public LineRenderer pathLine;
+    public Slider timeSlider;
+    public TMP_InputField timeScaleField;
 
     private DisplayData[] _displayData;
 
@@ -67,6 +71,9 @@ public class Main : MonoBehaviour
 
     void Update()
     {
+        float.TryParse(timeScaleField.text, out float timeScale);
+        timeScale = Mathf.Clamp(timeScale, 0.01f, 1000f);
+
         _elapsedInterval += Time.deltaTime;
         if(_elapsedInterval >= _currentInterval)
         {
@@ -95,6 +102,7 @@ public class Main : MonoBehaviour
 
         satellite.position += vel*Time.deltaTime;
         satellite.rotation = Quaternion.LookRotation(vel);
+
         earthTransform.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
     }
 
