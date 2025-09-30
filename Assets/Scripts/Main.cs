@@ -1,9 +1,5 @@
-using CsvHelper;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,23 +7,6 @@ using UnityEngine.UI;
 public class Main : MonoBehaviour
 {
     private const float EquatorialDiameterKm = 12756f;
-
-    public struct EphemerisRowData
-    {
-        public DateTimeOffset timeStamp;
-        public Vector3        eciPositionKm;
-        public Vector3        eciVelocityKmPs;
-        public Vector2        gcsRadians;
-    }
-
-    public struct DisplayData
-    {
-        public EphemerisRowData ephemerisData;
-        public float nextDataInterval;
-        public Vector3 scaledPositionKm;
-        public Vector3 scaledVelocityKmPs;
-        public Vector3 scaledGcsPoint;
-    }
 
     public Transform satellite;
     public Transform earthTransform;
@@ -37,8 +16,9 @@ public class Main : MonoBehaviour
     public LineRenderer equatorLine;
     public LineRenderer primeMeridianLine;
     public LineRenderer pathLine;
-    public Slider timeSlider;
     public TMP_InputField timeScaleField;
+    public FileLoader fileLoader;
+    public TimeControls timeControls;
 
     private DisplayData[] _displayData;
 
@@ -52,11 +32,16 @@ public class Main : MonoBehaviour
 
     void Start()
     {
-        var dataRows = ParseEphemerisData();
+        fileLoader.OnFileSelected += HandleFileSelected;
+    }
+
+    private void HandleFileSelected(string filePath)
+    { 
+
+        var dataRows = Parser.ParseEphemerisData(filePath);
+
         var scale = earthTransform.localScale.x/EquatorialDiameterKm;
         _displayData = GetDisplayData(dataRows, scale);
-
-        DrawData(_displayData);
 
         _pathIndex = 0;
         _currentInterval = _displayData[_pathIndex].nextDataInterval;
@@ -67,52 +52,56 @@ public class Main : MonoBehaviour
 
         _currentEarthRotation = GetEarthRotation(_displayData[_pathIndex]);
         _nextEarthRotation = GetEarthRotation(_displayData[_pathIndex+1]);
+
+        ClearChildren(pathPointsParent);
+        ClearChildren(gcsPointsParent);
+        DrawData(_displayData);
     }
 
     void Update()
     {
-        float.TryParse(timeScaleField.text, out float timeScale);
-        timeScale = Mathf.Clamp(timeScale, 0.01f, 1000f);
-
-        _elapsedInterval += timeScale * Time.deltaTime;
-        if(_elapsedInterval >= _currentInterval)
+        if(_displayData != null)
         {
-            float delta = _elapsedInterval - _currentInterval;
-            
-            _pathIndex = (_pathIndex+1)%_displayData.Length;
-            float nextInterval = _displayData[_pathIndex].nextDataInterval;
-
-            while(delta > nextInterval)
+            _elapsedInterval += timeControls.TimeScale * Time.deltaTime;
+            if(_elapsedInterval >= _currentInterval)
             {
-                delta -= nextInterval;
-                _pathIndex = (_pathIndex + 1) % _displayData.Length;
-                nextInterval = _displayData[_pathIndex].nextDataInterval;
+                float delta = _elapsedInterval - _currentInterval;
+            
+                _pathIndex = (_pathIndex+1)%_displayData.Length;
+                float nextInterval = _displayData[_pathIndex].nextDataInterval;
+
+                while(delta > nextInterval)
+                {
+                    delta -= nextInterval;
+                    _pathIndex = (_pathIndex + 1) % _displayData.Length;
+                    nextInterval = _displayData[_pathIndex].nextDataInterval;
+                }
+
+                _elapsedInterval = delta;
+
+                DisplayData currentData = _displayData[_pathIndex];
+
+                _currentInterval = currentData.nextDataInterval;
+                _currentVel = currentData.scaledVelocityKmPs;
+
+                int nextIndex = (_pathIndex+1)%_displayData.Length;
+                DisplayData nextData = _displayData[nextIndex];
+                _nextVel = nextData.scaledVelocityKmPs;
+
+                satellite.position = currentData.scaledPositionKm;
+
+                _currentEarthRotation = GetEarthRotation(currentData);
+                _nextEarthRotation = GetEarthRotation(nextData);
             }
 
-            _elapsedInterval = delta;
+            float lerpValue = _elapsedInterval/_currentInterval;
+            Vector3 velocity = Vector3.Lerp(_currentVel, _nextVel, lerpValue);
 
-            DisplayData currentData = _displayData[_pathIndex];
+            satellite.position += velocity * timeControls.TimeScale * Time.deltaTime;
+            satellite.rotation = Quaternion.LookRotation(velocity.normalized);
 
-            _currentInterval = currentData.nextDataInterval;
-            _currentVel = currentData.scaledVelocityKmPs;
-
-            int nextIndex = (_pathIndex+1)%_displayData.Length;
-            DisplayData nextData = _displayData[nextIndex];
-            _nextVel = nextData.scaledVelocityKmPs;
-
-            satellite.position = currentData.scaledPositionKm;
-
-            _currentEarthRotation = GetEarthRotation(currentData);
-            _nextEarthRotation = GetEarthRotation(nextData);
+            earthTransform.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
         }
-
-        float lerpValue = _elapsedInterval/_currentInterval;
-        Vector3 vel = Vector3.Lerp(_currentVel, _nextVel, lerpValue);
-
-        satellite.position += vel*timeScale*Time.deltaTime;
-        satellite.rotation = Quaternion.LookRotation(vel.normalized);
-
-        earthTransform.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
     }
 
     private Quaternion GetEarthRotation(DisplayData displayData)
@@ -164,52 +153,6 @@ public class Main : MonoBehaviour
         return rotation * Vector3.right * earthTransform.localScale.x * 0.5f;
     }
 
-    private List<EphemerisRowData> ParseEphemerisData()
-    {
-        List<EphemerisRowData> dataRows = new List<EphemerisRowData>();
-        string sourceFolder = Path.Combine(Application.dataPath, "Data");
-        foreach (string filePath in Directory.EnumerateFiles(sourceFolder, "*.csv", SearchOption.TopDirectoryOnly))
-        {
-            CsvHelper.Configuration.CsvConfiguration csvConfig = new CsvHelper.Configuration.CsvConfiguration(CultureInfo.InvariantCulture);
-            csvConfig.Delimiter = ",";
-            csvConfig.AllowComments = true;
-            csvConfig.Encoding = Encoding.UTF8;
-            csvConfig.PrepareHeaderForMatch = args => args.Header.ToLowerInvariant();  // force all the csv headers to lowercase
-
-            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (StreamReader sr = new StreamReader(fs, Encoding.UTF8, true))
-            using (CsvReader csv = new CsvReader(sr, csvConfig))
-            {
-                csv.Read();
-                csv.ReadHeader();  // first line is always the header line
-                while(csv.Read())
-                {
-                    var posixSec  = double.Parse(csv.GetField<string>("utc_posix_sec"));
-                    var timeStamp = DateTimeOffset.FromUnixTimeMilliseconds((long)Math.Round(posixSec*1000d));
-                    var posX      = (float)double.Parse(csv.GetField<string>("eci_pos_x_km"));
-                    var posY      = (float)double.Parse(csv.GetField<string>("eci_pos_y_km"));
-                    var posZ      = (float)double.Parse(csv.GetField<string>("eci_pos_z_km"));
-                    var velX      = (float)double.Parse(csv.GetField<string>("eci_vel_x_kmps"));
-                    var velY      = (float)double.Parse(csv.GetField<string>("eci_vel_y_kmps"));
-                    var velZ      = (float)double.Parse(csv.GetField<string>("eci_vel_z_kmps"));
-                    var lat       = (float)double.Parse(csv.GetField<string>("latitude_rad"));
-                    var lon       = (float)double.Parse(csv.GetField<string>("longitude_rad"));
-
-                    EphemerisRowData rowData = new EphemerisRowData
-                    {
-                        timeStamp       = timeStamp,
-                        eciPositionKm   = new Vector3(posX, posY, posZ),
-                        eciVelocityKmPs = new Vector3(velX, velY, velZ),
-                        gcsRadians      = new Vector2(lat,lon)
-                    };
-
-                    dataRows.Add(rowData);
-                }
-            }
-        }
-        return dataRows;
-    }
-
     private DisplayData[] GetDisplayData(List<EphemerisRowData> rowData, float scale)
     {
         var displayData = new DisplayData[rowData.Count];
@@ -239,6 +182,15 @@ public class Main : MonoBehaviour
         }
 
         return displayData;
+    }
+
+    private void ClearChildren(Transform parent)
+    {
+        int children = parent.childCount;
+        for (int i=0; i<children; i++)
+        {
+            Destroy(pathPointsParent.GetChild(0).gameObject);
+        }
     }
 
     public void DrawEarthLines()
