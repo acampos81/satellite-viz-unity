@@ -1,25 +1,25 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Main : MonoBehaviour
 {
     private const float EquatorialDiameterKm = 12756f;
 
-    public Transform satellite;
-    public Transform earthTransform;
-    public GameObject pointPrefab;
-    public Transform  pathPointsParent;
-    public Transform  gcsPointsParent;
-    public LineRenderer equatorLine;
-    public LineRenderer primeMeridianLine;
-    public LineRenderer pathLine;
-    public TMP_InputField timeScaleField;
-    public FileLoader fileLoader;
-    public TimeControls timeControls;
-    public DataBar dataBar;
+    [SerializeField] private Transform         _satellite;
+    [SerializeField] private GameObject        _satelliteIcon;
+    [SerializeField] private Transform         _earth;
+    [SerializeField] private LineRenderer      _pathLine;
+    [SerializeField] private GameObject        _pointPrefab;
+    [SerializeField] private Transform         _pathPointsParent;
+    [SerializeField] private Transform         _gcsPointsParent;
+    [SerializeField] private LineRenderer      _equatorLine;
+    [SerializeField] private LineRenderer      _primeMeridianLine;
+    [SerializeField] private FileLoader        _fileLoader;
+    [SerializeField] private TimeControls      _timeControls;
+    [SerializeField] private DataBar           _dataBar;
+    [SerializeField] private ViewControls      _viewControls;
+    [SerializeField] private PathPointsDisplay _pointsDiplay;
 
     private DisplayData[] _displayData;
 
@@ -33,15 +33,16 @@ public class Main : MonoBehaviour
 
     void Start()
     {
-        fileLoader.OnFileSelected += HandleFileSelected;
+        _viewControls.SetInteractivity(false);
+        _satelliteIcon.SetActive(false);
+        _fileLoader.OnFileSelected += HandleFileSelected;
     }
 
     private void HandleFileSelected(string filePath)
     { 
-
         var dataRows = Parser.ParseEphemerisData(filePath);
 
-        var scale = earthTransform.localScale.x/EquatorialDiameterKm;
+        var scale = _earth.localScale.x/EquatorialDiameterKm;
         _displayData = GetDisplayData(dataRows, scale);
 
         _pathIndex = 0;
@@ -49,21 +50,27 @@ public class Main : MonoBehaviour
         _currentVel = _displayData[_pathIndex].scaledVelocityKmPs;
         _nextVel = _displayData[_pathIndex+1].scaledVelocityKmPs;
 
-        satellite.position = _displayData[_pathIndex].scaledPositionKm;
+        _satellite.position = _displayData[_pathIndex].scaledPositionKm;
 
         _currentEarthRotation = GetEarthRotation(_displayData[_pathIndex]);
         _nextEarthRotation = GetEarthRotation(_displayData[_pathIndex+1]);
 
-        ClearChildren(pathPointsParent);
-        ClearChildren(gcsPointsParent);
+        _viewControls.SetInteractivity(true);
+        _satelliteIcon.SetActive(true);
+
+        ClearChildren(_pathPointsParent);
+        ClearChildren(_gcsPointsParent);
         DrawData(_displayData);
+
+        _pointsDiplay.Initialize(_displayData.Length);
+        _pointsDiplay.SetDataIndex(0);
     }
 
     void Update()
     {
         if(_displayData != null)
         {
-            _elapsedInterval += timeControls.TimeScale * Time.deltaTime;
+            _elapsedInterval += _timeControls.TimeScale * Time.deltaTime;
             if(_elapsedInterval >= _currentInterval)
             {
                 float delta = _elapsedInterval - _currentInterval;
@@ -89,21 +96,23 @@ public class Main : MonoBehaviour
                 DisplayData nextData = _displayData[nextIndex];
                 _nextVel = nextData.scaledVelocityKmPs;
 
-                satellite.position = currentData.scaledPositionKm;
+                _satellite.position = currentData.scaledPositionKm;
 
                 _currentEarthRotation = GetEarthRotation(currentData);
                 _nextEarthRotation = GetEarthRotation(nextData);
+
+                _pointsDiplay.SetDataIndex(_pathIndex);
             }
 
             float lerpValue = _elapsedInterval/_currentInterval;
             Vector3 velocity = Vector3.Lerp(_currentVel, _nextVel, lerpValue);
 
-            satellite.position += velocity * timeControls.TimeScale * Time.deltaTime;
-            satellite.rotation = Quaternion.LookRotation(velocity.normalized);
+            _satellite.position += velocity * _timeControls.TimeScale * Time.deltaTime;
+            _satellite.rotation = Quaternion.LookRotation(-_satellite.position);
 
-            earthTransform.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
+            _earth.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
 
-            dataBar.InterpolateData(_displayData[_pathIndex], _displayData[_pathIndex+1], lerpValue);
+            _dataBar.InterpolateData(_displayData[_pathIndex], _displayData[_pathIndex+1], lerpValue);
         }
     }
 
@@ -119,20 +128,20 @@ public class Main : MonoBehaviour
         return eciDelta * latitudeRotation * longitudeRotation;
     }
 
-    private void DrawData(DisplayData[] dataList)
+    private void DrawData(DisplayData[] displayData)
     {
-        pathLine.positionCount = dataList.Length;
-        for(int i=0; i<dataList.Length; i++)
+        _pathLine.positionCount = displayData.Length;
+        for(int i=0; i<displayData.Length; i++)
         {
-            DisplayData dData = dataList[i];
+            DisplayData dData = displayData[i];
 
-            pathLine.SetPosition(i, dData.scaledPositionKm);
+            _pathLine.SetPosition(i, dData.scaledPositionKm);
 
-            var pathPoint = GameObject.Instantiate(pointPrefab, pathPointsParent);
+            var pathPoint = GameObject.Instantiate(_pointPrefab, _pathPointsParent);
             pathPoint.transform.position = dData.scaledPositionKm;
             pathPoint.name = $"PathPoint_{i}";
 
-            var gcsPoint = GameObject.Instantiate(pointPrefab, gcsPointsParent);
+            var gcsPoint = GameObject.Instantiate(_pointPrefab, _gcsPointsParent);
             gcsPoint.transform.position = dData.scaledGcsPoint;
             gcsPoint.name = $"GCSPoint_{i}";
         }
@@ -153,7 +162,7 @@ public class Main : MonoBehaviour
     private Vector3 GcsRadiansToPosition(Vector2 gcsRadians)
     {
         Quaternion rotation = GcsRadiansToRotation(gcsRadians);
-        return rotation * Vector3.right * earthTransform.localScale.x * 0.5f;
+        return rotation * Vector3.right * _earth.localScale.x * 0.5f;
     }
 
     private DisplayData[] GetDisplayData(List<EphemerisRowData> rowData, float scale)
@@ -192,7 +201,7 @@ public class Main : MonoBehaviour
         int children = parent.childCount;
         for (int i=0; i<children; i++)
         {
-            Destroy(pathPointsParent.GetChild(0).gameObject);
+            Destroy(_pathPointsParent.GetChild(0).gameObject);
         }
     }
 
@@ -201,17 +210,17 @@ public class Main : MonoBehaviour
         int resolution = 256;
         float increment = 360f/resolution;
 
-        primeMeridianLine.positionCount = resolution;
-        equatorLine.positionCount = resolution;
+        _primeMeridianLine.positionCount = resolution;
+        _equatorLine.positionCount = resolution;
 
         for(int i=0; i<resolution; i++)
         {
-            var pmRotation = Quaternion.AngleAxis(increment*i, earthTransform.forward);
-            var eqRotation = Quaternion.AngleAxis(increment*i, earthTransform.up);
-            var pmPoint = pmRotation * Vector3.right * earthTransform.localScale.x * 0.5f;
-            var eqPoint = eqRotation * Vector3.right * earthTransform.localScale.x * 0.5f;
-            primeMeridianLine.SetPosition(i, pmPoint);
-            equatorLine.SetPosition(i, eqPoint);
+            var pmRotation = Quaternion.AngleAxis(increment*i, _earth.forward);
+            var eqRotation = Quaternion.AngleAxis(increment*i, _earth.up);
+            var pmPoint = pmRotation * Vector3.right * _earth.localScale.x * 0.501f;
+            var eqPoint = eqRotation * Vector3.right * _earth.localScale.x * 0.501f;
+            _primeMeridianLine.SetPosition(i, pmPoint);
+            _equatorLine.SetPosition(i, eqPoint);
         }
     }
 }
