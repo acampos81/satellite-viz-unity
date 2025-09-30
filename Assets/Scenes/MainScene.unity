@@ -735,14 +735,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 288655109}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.9411647, z: -0, w: -0.33794844}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1959263521}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 219.504, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &296865815
 GameObject:
   m_ObjectHideFlags: 0
@@ -4261,8 +4261,9 @@ GameObject:
   - component: {fileID: 895093060}
   - component: {fileID: 895093062}
   - component: {fileID: 895093061}
+  - component: {fileID: 895093063}
   m_Layer: 5
-  m_Name: Sidebar
+  m_Name: DataBar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4333,6 +4334,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 895093059}
   m_CullTransparentMesh: 1
+--- !u!114 &895093063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 895093059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aef9c1b82625494d83cc8183643e666, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _dateTimeField: {fileID: 1511903383}
+  _eciPostion: {fileID: 938843201}
+  _eciVelocity: {fileID: 1568286072}
+  _latitudeField: {fileID: 336424709}
+  _longitudeField: {fileID: 62520047}
 --- !u!1 &897139276
 GameObject:
   m_ObjectHideFlags: 0
@@ -4615,6 +4633,7 @@ GameObject:
   m_Component:
   - component: {fileID: 938843199}
   - component: {fileID: 938843200}
+  - component: {fileID: 938843201}
   m_Layer: 5
   m_Name: ECIPosition
   m_TagString: Untagged
@@ -4651,6 +4670,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 938843198}
   m_CullTransparentMesh: 1
+--- !u!114 &938843201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 938843198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f593127714263ee4398812a8978ddb0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _xField: {fileID: 676811711}
+  _yField: {fileID: 395223654}
+  _zField: {fileID: 1370351477}
 --- !u!1 &977319908
 GameObject:
   m_ObjectHideFlags: 0
@@ -6935,7 +6969,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 3
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -8356,6 +8390,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1568286070}
   - component: {fileID: 1568286071}
+  - component: {fileID: 1568286072}
   m_Layer: 5
   m_Name: ECIVelocity
   m_TagString: Untagged
@@ -8392,6 +8427,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1568286069}
   m_CullTransparentMesh: 1
+--- !u!114 &1568286072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1568286069}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f593127714263ee4398812a8978ddb0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _xField: {fileID: 660897381}
+  _yField: {fileID: 1673691399}
+  _zField: {fileID: 1333712101}
 --- !u!1 &1598694176
 GameObject:
   m_ObjectHideFlags: 0
@@ -9668,6 +9718,7 @@ MonoBehaviour:
   timeScaleField: {fileID: 618347633}
   fileLoader: {fileID: 1909332952}
   timeControls: {fileID: 188616191}
+  dataBar: {fileID: 895093063}
 --- !u!4 &1814463213
 Transform:
   m_ObjectHideFlags: 0

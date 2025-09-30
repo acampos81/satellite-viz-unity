@@ -19,6 +19,7 @@ public class Main : MonoBehaviour
     public TMP_InputField timeScaleField;
     public FileLoader fileLoader;
     public TimeControls timeControls;
+    public DataBar dataBar;
 
     private DisplayData[] _displayData;
 
@@ -101,6 +102,8 @@ public class Main : MonoBehaviour
             satellite.rotation = Quaternion.LookRotation(velocity.normalized);
 
             earthTransform.localRotation = Quaternion.Slerp(_currentEarthRotation, _nextEarthRotation, lerpValue);
+
+            dataBar.InterpolateData(_displayData[_pathIndex], _displayData[_pathIndex+1], lerpValue);
         }
     }
 
