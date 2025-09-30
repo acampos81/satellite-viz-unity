@@ -19,7 +19,6 @@ public class Main : MonoBehaviour
     [SerializeField] private TimeControls      _timeControls;
     [SerializeField] private DataBar           _dataBar;
     [SerializeField] private ViewControls      _viewControls;
-    [SerializeField] private PathPointsDisplay _pointsDiplay;
 
     private DisplayData[] _displayData;
 
@@ -61,9 +60,6 @@ public class Main : MonoBehaviour
         ClearChildren(_pathPointsParent);
         ClearChildren(_gcsPointsParent);
         DrawData(_displayData);
-
-        _pointsDiplay.Initialize(_displayData.Length);
-        _pointsDiplay.SetDataIndex(0);
     }
 
     void Update()
@@ -100,8 +96,6 @@ public class Main : MonoBehaviour
 
                 _currentEarthRotation = GetEarthRotation(currentData);
                 _nextEarthRotation = GetEarthRotation(nextData);
-
-                _pointsDiplay.SetDataIndex(_pathIndex);
             }
 
             float lerpValue = _elapsedInterval/_currentInterval;
