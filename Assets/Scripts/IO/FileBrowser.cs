@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 
-public class FileLoader : MonoBehaviour
+public class FileBrowser : MonoBehaviour, IDataLoader
 {
     private const string pattern = @"[^\\/]+$";
 

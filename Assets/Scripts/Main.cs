@@ -15,7 +15,7 @@ public class Main : MonoBehaviour
     [SerializeField] private Transform         _gcsPointsParent;
     [SerializeField] private LineRenderer      _equatorLine;
     [SerializeField] private LineRenderer      _primeMeridianLine;
-    [SerializeField] private FileLoader        _fileLoader;
+    [SerializeField] private FileBrowser        _fileLoader;
     [SerializeField] private TimeControls      _timeControls;
     [SerializeField] private DataBar           _dataBar;
     [SerializeField] private ViewControls      _viewControls;
@@ -60,6 +60,8 @@ public class Main : MonoBehaviour
         ClearChildren(_pathPointsParent);
         ClearChildren(_gcsPointsParent);
         DrawData(_displayData);
+
+        _earth.localRotation = _currentEarthRotation;
     }
 
     void Update()
@@ -112,14 +114,16 @@ public class Main : MonoBehaviour
 
     private Quaternion GetEarthRotation(DisplayData displayData)
     {
-        var axisRotation = Quaternion.AngleAxis(23.4f, Vector3.right);
-        var latitudeRotation = Quaternion.AngleAxis(-displayData.ephemerisData.gcsRadians.x * Mathf.Rad2Deg, Vector3.forward);
-        var longitudeRotation = Quaternion.AngleAxis(displayData.ephemerisData.gcsRadians.y * Mathf.Rad2Deg, Vector3.up);
-
+        // Get the lat/long earth rotation
+        var gcsRotation = GcsRadiansToRotation(displayData.ephemerisData.gcsRadians);
+        
+        // Calculate the spherical delta from the lat/long origin to the current eci position.
+        // This assumes the earth's model's lat/long origin is initially aligned with the J2000 X axis.
         var eciRotation = Quaternion.LookRotation(displayData.scaledPositionKm.normalized);
         var eciDelta = eciRotation * Quaternion.Inverse(Quaternion.LookRotation(Vector3.right));
 
-        return eciDelta * latitudeRotation * longitudeRotation;
+        // Calculate the rotation from current lat/long rotation to the ECI rotation relative to the J2000 x axis.
+        return eciDelta * Quaternion.Inverse(gcsRotation);
     }
 
     private void DrawData(DisplayData[] displayData)

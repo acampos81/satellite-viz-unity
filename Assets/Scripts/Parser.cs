@@ -41,8 +41,8 @@ public class Parser
                 EphemerisRowData rowData = new EphemerisRowData
                 {
                     timeStamp = timeStamp,
-                    eciPositionKm = new Vector3(posX, posY, posZ),
-                    eciVelocityKmPs = new Vector3(velX, velY, velZ),
+                    eciPositionKm = new Vector3(posX, posZ, posY),
+                    eciVelocityKmPs = new Vector3(velX, velZ, velY),
                     gcsRadians = new Vector2(lat, lon)
                 };
 
