@@ -3,8 +3,14 @@ using EphemerisDemo.UI;
 using UnityEngine;
 using Zenject;
 
-public class FrontPanel : MonoBehaviour
+public class PanelManager : MonoBehaviour
 {
+    [SerializeField]
+    private Transform _ephermesisPanel;
+
+    [SerializeField]
+    private Transform _dialogPanel;
+
     [Inject]
     private SignalBus _signalBus;
 
@@ -20,7 +26,7 @@ public class FrontPanel : MonoBehaviour
     private void HandleFileListReady(FileListReadySignal signal)
     {
         FileSelectorDialog fileSelector = _fileSelectorFactory.Create();
-        fileSelector.transform.SetParent(transform, worldPositionStays:false);
+        fileSelector.transform.SetParent(_dialogPanel, worldPositionStays:false);
         fileSelector.DisplayFileList(signal.fileList);
     }
 }

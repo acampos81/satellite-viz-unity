@@ -38,16 +38,12 @@ public class Main : MonoBehaviour
     {
         _viewControls.SetInteractivity(false);
         _satelliteIcon.SetActive(false);
-        _signalBus.Subscribe<ParseFileSignal>(HandleParseFile);
+        _signalBus.Subscribe<FileDataReadySignal>(HandleFileData);
     }
 
-    public void HandleParseFile(ParseFileSignal signal)
+    public void HandleFileData(FileDataReadySignal signal)
     { 
-        var filePath = signal.filePath;
-        var dataRows = EphemerisParser.ParseFile(filePath);
-
-        var scale = _earth.localScale.x/EquatorialDiameterKm;
-        _displayData = GetDisplayData(dataRows, scale);
+        _displayData = signal.fileData.displayData;
 
         _pathIndex = 0;
         _currentInterval = _displayData[_pathIndex].nextDataInterval;
@@ -162,10 +158,10 @@ public class Main : MonoBehaviour
         return longitudeRotation * latitudeRotation;
     }
 
-    private Vector3 GcsRadiansToPosition(Vector2 gcsRadians)
+    private Vector3 GcsRadiansToPosition(Vector2 gcsRadians, float earthRadius)
     {
         Quaternion rotation = GcsRadiansToRotation(gcsRadians);
-        return rotation * Vector3.right * _earth.localScale.x * 0.5f;
+        return rotation * Vector3.right * earthRadius;
     }
 
     private DisplayData[] GetDisplayData(List<EphemerisRowData> rowData, float scale)
@@ -190,7 +186,7 @@ public class Main : MonoBehaviour
                 nextDataInterval = nextDataInterval,
                 scaledPositionKm = eData.eciPositionKm * scale,
                 scaledVelocityKmPs = eData.eciVelocityKmPs * scale,
-                scaledGcsPoint = GcsRadiansToPosition(eData.gcsRadians),
+                scaledGcsPoint = GcsRadiansToPosition(eData.gcsRadians, _earth.localScale.x * 0.5f),
             };
 
             displayData[i] = dData;

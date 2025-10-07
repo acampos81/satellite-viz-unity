@@ -2,10 +2,11 @@ using SFB;
 using UnityEngine;
 using EphemerisDemo.DI;
 using Zenject;
+using EphemerisDemo.Utilities;
 
 namespace EphemerisDemo.IO
 {
-    public class FileBrowser : MonoBehaviour, IDataLoader
+    public class FileBrowser : MonoBehaviour, IFileLoader
     {
         // Regex to isolate the file name item in a full system file path
         //private const string _fileNamePattern = @"[^\\/]+$";
@@ -28,7 +29,8 @@ namespace EphemerisDemo.IO
                     Debug.LogWarning($"More than one file selected, defaulting to first file:{paths[0]}");
                 }
                 
-                _signalBus.Fire(new ParseFileSignal { filePath = paths[0] });
+                string filePath = paths[0];
+                _signalBus.Fire(new ParseFileSignal { fileName = DemoUtils.GetFileName(filePath), filePath = filePath });
             }
             else
             {

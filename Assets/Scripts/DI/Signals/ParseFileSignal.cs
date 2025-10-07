@@ -2,6 +2,7 @@
 {
     public class ParseFileSignal
     {
+        public string fileName;
         public string filePath;
     }
 }

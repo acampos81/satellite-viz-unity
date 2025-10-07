@@ -1,6 +1,6 @@
 ﻿using System;
 
-public interface IDataLoader
+public interface IFileLoader
 {
     public void BrowseForFile();
 }

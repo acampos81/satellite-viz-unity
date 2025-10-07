@@ -10,7 +10,7 @@ using EphemerisDemo.DI;
 
 namespace EphemerisDemo.IO
 {
-    public class FileDownloader : MonoBehaviour, IDataLoader
+    public class FileDownloader : MonoBehaviour, IFileLoader
     {
         // HttpClient is intended to be instantiated once per application.
         private static readonly HttpClient _client = new HttpClient();
@@ -95,7 +95,7 @@ namespace EphemerisDemo.IO
             else
             {
                 // Fire signal to parse the downloaded file
-                _signalBus.Fire(new ParseFileSignal { filePath = downloadTask.Result });
+                _signalBus.Fire(new ParseFileSignal { fileName = fileName, filePath = downloadTask.Result });
             }
         }
 
