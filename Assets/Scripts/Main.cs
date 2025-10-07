@@ -1,6 +1,8 @@
+using EphemerisDemo.DI;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Zenject;
 
 public class Main : MonoBehaviour
 {
@@ -15,7 +17,6 @@ public class Main : MonoBehaviour
     [SerializeField] private Transform         _gcsPointsParent;
     [SerializeField] private LineRenderer      _equatorLine;
     [SerializeField] private LineRenderer      _primeMeridianLine;
-    [SerializeField] private FileBrowser        _fileLoader;
     [SerializeField] private TimeControls      _timeControls;
     [SerializeField] private DataBar           _dataBar;
     [SerializeField] private ViewControls      _viewControls;
@@ -30,16 +31,20 @@ public class Main : MonoBehaviour
     private Quaternion _currentEarthRotation;
     private Quaternion _nextEarthRotation;
 
+    [Inject]
+    private SignalBus _signalBus;
+
     void Start()
     {
         _viewControls.SetInteractivity(false);
         _satelliteIcon.SetActive(false);
-        _fileLoader.OnFileSelected += HandleFileSelected;
+        _signalBus.Subscribe<ParseFileSignal>(HandleParseFile);
     }
 
-    private void HandleFileSelected(string filePath)
+    public void HandleParseFile(ParseFileSignal signal)
     { 
-        var dataRows = Parser.ParseEphemerisData(filePath);
+        var filePath = signal.filePath;
+        var dataRows = EphemerisParser.ParseFile(filePath);
 
         var scale = _earth.localScale.x/EquatorialDiameterKm;
         _displayData = GetDisplayData(dataRows, scale);

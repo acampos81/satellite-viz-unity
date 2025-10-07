@@ -1,39 +1,43 @@
 using SFB;
-using System;
-using System.Text.RegularExpressions;
-using TMPro;
 using UnityEngine;
+using EphemerisDemo.DI;
+using Zenject;
 
-public class FileBrowser : MonoBehaviour, IDataLoader
+namespace EphemerisDemo.IO
 {
-    private const string pattern = @"[^\\/]+$";
-
-    public event Action<string> OnFileSelected;
-
-    public TMP_Text fileField;
-
-    public void BrowseForFile()
+    public class FileBrowser : MonoBehaviour, IDataLoader
     {
-        var extensions = new[]
-        {
-            new ExtensionFilter("CSV Files", "csv")
-        };
+        // Regex to isolate the file name item in a full system file path
+        //private const string _fileNamePattern = @"[^\\/]+$";
 
-        string[] paths = StandaloneFileBrowser.OpenFilePanel("Select a file", "", extensions, false);
+        [Inject]
+        private SignalBus _signalBus;
 
-        if (paths.Length > 0)
+        public void BrowseForFile()
         {
-            string firstFileName = paths[0];
-            OnFileSelected(firstFileName);
+            var extensions = new[]
+            {
+                new ExtensionFilter("CSV File Filter", "csv") 
+            };
+
+            string[] paths = StandaloneFileBrowser.OpenFilePanel("Select a file", "", extensions, false);
+            if (paths.Length > 0)
+            {
+                if (paths.Length > 1)
+                {
+                    Debug.LogWarning($"More than one file selected, defaulting to first file:{paths[0]}");
+                }
+                
+                _signalBus.Fire(new ParseFileSignal { filePath = paths[0] });
+            }
+            else
+            {
+                Debug.LogWarning("No local files were selected.");
+            }
 
             // Isolate the filename only for display
-            Regex fileNameRegex = new Regex(pattern);
-            MatchCollection matches = fileNameRegex.Matches(firstFileName);
-            fileField.text = matches[0].Value;
-        }
-        else
-        {
-            Debug.LogWarning($"More than one file selected, defaulting to first file:{paths[0]}");
+            //Regex fileNameRegex = new Regex(_fileNamePattern);
+            //MatchCollection matches = fileNameRegex.Matches(firstFileName);
         }
     }
 }
