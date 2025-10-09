@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EphemerisDemo.IO;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -37,7 +38,7 @@ namespace EphemerisDemo.Utilities
         {
             Quaternion rotation = GcsRadiansToRotation(gcsRadians);
             float scaledEarthRadius = EquatorialDiameterKm * scale * 0.5f;
-            return rotation * Vector3.right * EquatorialDiameterKm * scaledEarthRadius;
+            return rotation * Vector3.right * scaledEarthRadius;
         }
 
         /// <summary>

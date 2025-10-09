@@ -1,4 +1,6 @@
 using EphemerisDemo.DI;
+using EphemerisDemo.IO;
+using EphemerisDemo.Model;
 using EphemerisDemo.UI;
 using UnityEngine;
 using Zenject;
@@ -11,14 +13,16 @@ public class PanelManager : MonoBehaviour
     [SerializeField]
     private Transform _dialogPanel;
 
+    [SerializeField]
+    private GameObject _satelliteIconPrefab;
+
     [Inject]
     private SignalBus _signalBus;
 
     [Inject]
     private FileSelectorDialog.Factory _fileSelectorFactory;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void Start()
     {
         _signalBus.Subscribe<FileListReadySignal>(HandleFileListReady);
     }

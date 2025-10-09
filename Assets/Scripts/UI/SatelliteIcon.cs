@@ -4,10 +4,10 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Image))]
 public class SatelliteIcon : MonoBehaviour
 {
-    [SerializeField] private Camera _camera;
-    [SerializeField] private Transform _satellite;
     [SerializeField] private float _minAlphaDistance;
     [SerializeField] private float _maxAlphaDistance;
+
+    public Transform SatelliteTransform { get; set; }
 
     private Image _image;
 
@@ -25,12 +25,12 @@ public class SatelliteIcon : MonoBehaviour
 
     private void ScreenPosition()
     {
-        transform.position = _camera.WorldToScreenPoint(_satellite.position);
+        transform.position = Camera.main.WorldToScreenPoint(SatelliteTransform.position);
     }
 
     private void DistanceAlpha()
     {
-        var cameraDistance = (_camera.transform.position - _satellite.position).magnitude;
+        var cameraDistance = (Camera.main.transform.position - SatelliteTransform.position).magnitude;
         if(cameraDistance > _minAlphaDistance)
         {
             float alphaLerp = (cameraDistance-_minAlphaDistance)/ _maxAlphaDistance;

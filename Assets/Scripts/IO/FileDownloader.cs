@@ -1,53 +1,51 @@
-﻿using System;
-using System.Collections;
+﻿using EphemerisDemo.DI;
+using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using UnityEngine;
 using Zenject;
-using EphemerisDemo.DI;
 
 namespace EphemerisDemo.IO
 {
-    public class FileDownloader : MonoBehaviour, IFileLoader
+    public class FileDownloader : IFileLoader, IDisposable
     {
         // HttpClient is intended to be instantiated once per application.
         private static readonly HttpClient _client = new HttpClient();
 
-        [Inject]
-        private SignalBus _signalBus;
+        private readonly SignalBus _signalBus;
 
-        private void Start()
+        [Inject]
+        public FileDownloader(SignalBus signalBus)
         {
+            _signalBus = signalBus;
             _signalBus.Subscribe<FileSelectedSignal>(HandleFileSelected);
+        }
+
+        public void Dispose()
+        {
+            _signalBus.Unsubscribe<FileSelectedSignal>(HandleFileSelected);
         }
 
         public void BrowseForFile()
         {
-            StartCoroutine(WaitForFileList());
+            // Fire and forget async function.
+            // The async function will capture the synchronization context.
+            _ = GetFileList();
         }
 
-        private IEnumerator WaitForFileList()
+        private void LogError(string message)
         {
-            Task<string[]> getListTask = GetFileList();
-            yield return new WaitUntil(()=>getListTask.IsCompleted);
-
-            if (getListTask.IsFaulted)
-            {
-                // Rethrow the wrapped exception from the task
-                throw getListTask.Exception.InnerException;
-            }
-            else
-            {
-                // Fire signal to show the file selector
-                _signalBus.Fire(new FileListReadySignal { fileList = getListTask.Result });
-            }
+            Debug.LogError(message);
         }
 
-
-        private async Task<string[]> GetFileList()
+        private async Task GetFileList()
         {
+            // capture the main thread context
+            var context = SynchronizationContext.Current;
+
             try
             {
                 using HttpResponseMessage response = await _client.GetAsync(IOConstants.ListURL).ConfigureAwait(false);
@@ -69,38 +67,25 @@ namespace EphemerisDemo.IO
                     fileList[i] = nodeList[i].InnerText;
                 }
 
-                return fileList;
+                // SignalBus is not thread-safe, so marshall it back to the main thread to fire.
+                context.Post(_ => _signalBus.Fire(new FileListReadySignal { fileList = fileList }), null);
             }
             catch (HttpRequestException e)
             {
-                throw new Exception(e.Message);
+                LogError(e.Message);
             }
         }
 
         private void HandleFileSelected(FileSelectedSignal signal)
         {
-            StartCoroutine(WaitForDownload(signal.fileName, IOConstants.DownloadPath));
+            _ = DownloadFile(signal.fileName, IOConstants.DownloadPath);
         }
 
-        private IEnumerator WaitForDownload(string fileName, string destinationPath)
+        private async Task DownloadFile(string fileName, string destinationPath)
         {
-            Task<string> downloadTask = DownloadFile(fileName, destinationPath);
-            yield return new WaitUntil(() => downloadTask.IsCompleted);
+            // capture the main thread context
+            var context = SynchronizationContext.Current;
 
-            if (downloadTask.IsFaulted)
-            {
-                // Rethrow the wrapped exception from the task
-                throw downloadTask.Exception.InnerException;
-            }
-            else
-            {
-                // Fire signal to parse the downloaded file
-                _signalBus.Fire(new ParseFileSignal { fileName = fileName, filePath = downloadTask.Result });
-            }
-        }
-
-        private async Task<string> DownloadFile(string fileName, string destinationPath)
-        {
             try
             {
                 string fileURL = $"{IOConstants.StorageURL}/{fileName}";
@@ -122,11 +107,12 @@ namespace EphemerisDemo.IO
                     }
                 }
 
-                return filePath;
+                // SignalBus is not thread-safe, so marshall it back to the main thread to fire.
+                context.Post(_ => _signalBus.Fire(new ParseFileSignal { fileName = fileName, filePath = filePath }), null);
             }
             catch (HttpRequestException e)
             {
-                throw new Exception(e.Message);
+                LogError(e.Message);
             }
         }
     }
